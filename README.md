@@ -40,7 +40,7 @@
 | **Python** | Core programming language |
 | **Pytest** | Testing framework & test suite execution |
 | **Custom HTML/CSS** | Dynamic test report generation |
-| **Selenium / Playwright** | Web browser automation & interaction |
+| **Playwright** | Web browser automation & interaction |
 
 ---
 
