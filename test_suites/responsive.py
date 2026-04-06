@@ -3,7 +3,7 @@
 from playwright.async_api import async_playwright
 
 from src.crawler import CrawlResult
-from src.utils import TestResult, get_logger, timer_ms, elapsed_ms, screenshots_dir, safe_filename
+from src.utils import TestResult, get_logger, timer_ms, elapsed_ms, screenshots_dir, safe_filename, authenticated_context
 
 logger = get_logger(__name__)
 
@@ -35,8 +35,8 @@ async def run(crawl_result: CrawlResult) -> list[TestResult]:
             for url in pages:
                 for vp in VIEWPORTS:
                     start = timer_ms()
-                    context = await browser.new_context(
-                        viewport={"width": vp["width"], "height": vp["height"]}
+                    context = await authenticated_context(
+                        browser, viewport={"width": vp["width"], "height": vp["height"]}
                     )
                     page = await context.new_page()
                     try:

@@ -59,6 +59,95 @@ def safe_filename(url: str, prefix: str = "", max_len: int = 80) -> str:
     return f"{prefix}_{safe}" if prefix else safe
 
 
+async def authenticated_context(browser, **kwargs):
+    """Create a BrowserContext and replay login session storage if credentials exist.
+
+    Test suites call this instead of browser.new_context() directly so that
+    pages opened inside the context start with the auth session already set.
+
+    Args:
+        browser: Playwright Browser instance.
+        **kwargs: Forwarded to browser.new_context().
+
+    Returns:
+        BrowserContext (caller must close it).
+    """
+    import json as _json
+    context = await browser.new_context(**kwargs)
+
+    username = os.environ.get("AI_REPORTER_USERNAME")
+    password = os.environ.get("AI_REPORTER_PASSWORD")
+
+    if username and password:
+        # Perform a quick login on a temp page to capture session storage,
+        # then install it as an init-script on the context.
+        from playwright.async_api import Page
+        page: Page = await context.new_page()
+        try:
+            base_url = os.environ.get("AI_REPORTER_TARGET_URL", "")
+            if base_url:
+                await page.goto(base_url, timeout=30_000, wait_until="domcontentloaded")
+                # Fill credentials
+                user_sel = (
+                    "input[type=text][name*=user], input[type=text][id*=user], "
+                    "input[type=email], input[name=email], input[id=user-name], "
+                    "input[autocomplete=username], input[name=username]"
+                )
+                u = page.locator(user_sel).first
+                p = page.locator("input[type=password]").first
+                if await u.count() and await p.count():
+                    await u.fill(username, timeout=5_000)
+                    await p.fill(password, timeout=5_000)
+                    sub = page.locator(
+                        "button[type=submit], input[type=submit], button#login-button, "
+                        "button:has-text('Log in'), button:has-text('Login')"
+                    ).first
+                    if await sub.count():
+                        await sub.click(timeout=10_000)
+                    else:
+                        await p.press("Enter")
+                    try:
+                        await page.wait_for_load_state("domcontentloaded", timeout=15_000)
+                    except Exception:
+                        pass
+                    ss = await page.evaluate("() => Object.fromEntries(Object.entries(sessionStorage))")
+                    ls = await page.evaluate("() => Object.fromEntries(Object.entries(localStorage))")
+                    if ss or ls:
+                        ss_j = _json.dumps(ss)
+                        ls_j = _json.dumps(ls)
+                        script = f"(function(){{var ss={ss_j};var ls={ls_j};for(var k in ss)sessionStorage.setItem(k,ss[k]);for(var k in ls)localStorage.setItem(k,ls[k]);}})();"
+                        await context.add_init_script(script)
+        except Exception:
+            pass
+        finally:
+            await page.close()
+
+    return context
+
+
+def auth_init_script() -> str:
+    """Return a Playwright init-script that replays session/local storage for auth.
+
+    Test suites call this and pass the result to context.add_init_script() so
+    that pages opened after an auto-login stay authenticated.
+
+    Returns:
+        JavaScript string, or empty string if no credentials are set.
+    """
+    import json as _json
+    raw = os.environ.get("AI_REPORTER_SESSION_STORAGE", "")
+    if not raw:
+        return ""
+    try:
+        ss = _json.loads(raw)
+        ls = _json.loads(os.environ.get("AI_REPORTER_LOCAL_STORAGE", "{}"))
+        ss_j = _json.dumps(ss)
+        ls_j = _json.dumps(ls)
+        return f"""(function(){{var ss={ss_j};var ls={ls_j};for(var k in ss)sessionStorage.setItem(k,ss[k]);for(var k in ls)localStorage.setItem(k,ls[k]);}})();"""
+    except Exception:
+        return ""
+
+
 def is_headless() -> bool:
     """Return False when the AI_REPORTER_HEADED env var is set to '1'.
 

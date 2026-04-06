@@ -3,7 +3,7 @@
 from playwright.async_api import async_playwright
 
 from src.crawler import CrawlResult
-from src.utils import TestResult, get_logger, timer_ms, elapsed_ms
+from src.utils import TestResult, get_logger, timer_ms, elapsed_ms, authenticated_context
 
 logger = get_logger(__name__)
 
@@ -27,7 +27,7 @@ async def run(crawl_result: CrawlResult) -> list[TestResult]:
         browser = await pw.chromium.launch(headless=True)
         try:
             for url in crawl_result.pages[:5]:
-                context = await browser.new_context()
+                context = await authenticated_context(browser)
                 page = await context.new_page()
                 start = timer_ms()
 

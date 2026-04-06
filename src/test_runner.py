@@ -76,6 +76,8 @@ async def run_tests(
     url: str,
     test_type: str,
     output: Optional[str] = None,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
 ) -> str:
     """Crawl the target URL then run the requested test suite(s).
 
@@ -83,12 +85,21 @@ async def run_tests(
         url: Target website URL.
         test_type: Suite name or "all".
         output: Optional output filename (without .html extension).
+        username: Optional login username for auto-login.
+        password: Optional login password for auto-login.
 
     Returns:
         Path to the generated HTML report.
     """
+    import json as _json
     logger.info("Crawling %s ...", url)
-    crawl_result = await crawl(url)
+    crawl_result = await crawl(url, username=username, password=password)
+
+    # Expose storage captured during login so test suites can replay it
+    if crawl_result.logged_in:
+        # crawler already set context init-script; also expose via env for suites
+        # that open fresh browser instances
+        pass  # storage is injected per-context in crawler; suites reuse env creds
 
     if not crawl_result.pages:
         logger.error("No pages discovered for %s", url)
@@ -126,10 +137,16 @@ def main() -> None:
     )
     parser.add_argument("--output", help="Output filename (without .html)", default=None)
     parser.add_argument("--headed", action="store_true", help="Run with visible browser window")
+    parser.add_argument("--username", help="Username/email for auto-login", default=None)
+    parser.add_argument("--password", help="Password for auto-login", default=None)
     args = parser.parse_args()
 
     if args.headed:
         os.environ["AI_REPORTER_HEADED"] = "1"
+    if args.username:
+        os.environ["AI_REPORTER_USERNAME"] = args.username
+    if args.password:
+        os.environ["AI_REPORTER_PASSWORD"] = args.password
 
     # Set a unique run ID so screenshots/reports land in an isolated subfolder
     from datetime import datetime
@@ -137,9 +154,10 @@ def main() -> None:
     hostname = urlparse(args.url).netloc.replace(".", "_").replace("www_", "")
     run_id = f"{hostname}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     os.environ["AI_REPORTER_RUN_ID"] = run_id
+    os.environ["AI_REPORTER_TARGET_URL"] = args.url
     logger.info("Run ID: %s", run_id)
 
-    asyncio.run(run_tests(args.url, args.type, args.output))
+    asyncio.run(run_tests(args.url, args.type, args.output, args.username, args.password))
 
 
 if __name__ == "__main__":

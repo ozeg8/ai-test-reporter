@@ -6,7 +6,7 @@ from typing import Optional
 from playwright.async_api import async_playwright, Browser, Page, Response
 
 from src.crawler import CrawlResult
-from src.utils import TestResult, get_logger, timer_ms, elapsed_ms, screenshots_dir, is_headless, safe_filename
+from src.utils import TestResult, get_logger, timer_ms, elapsed_ms, screenshots_dir, is_headless, safe_filename, authenticated_context
 
 logger = get_logger(__name__)
 
@@ -31,7 +31,7 @@ async def _check_page(
         List of TestResult for this page.
     """
     results: list[TestResult] = []
-    context = await browser.new_context()
+    context = await authenticated_context(browser)
     page = await context.new_page()
     console_errors: list[str] = []
     page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)

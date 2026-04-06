@@ -3,7 +3,7 @@
 from playwright.async_api import async_playwright
 
 from src.crawler import CrawlResult
-from src.utils import TestResult, get_logger, timer_ms, elapsed_ms, screenshots_dir, safe_filename
+from src.utils import TestResult, get_logger, timer_ms, elapsed_ms, screenshots_dir, safe_filename, authenticated_context
 
 logger = get_logger(__name__)
 
@@ -44,7 +44,7 @@ async def run(crawl_result: CrawlResult) -> list[TestResult]:
                 for idx, form in enumerate(forms[:2]):
                     # XSS test
                     start = timer_ms()
-                    context = await browser.new_context()
+                    context = await authenticated_context(browser)
                     page = await context.new_page()
                     try:
                         await page.goto(page_url, timeout=30_000, wait_until="domcontentloaded")
@@ -88,7 +88,7 @@ async def run(crawl_result: CrawlResult) -> list[TestResult]:
 
                     # Special characters test
                     start = timer_ms()
-                    context = await browser.new_context()
+                    context = await authenticated_context(browser)
                     page = await context.new_page()
                     try:
                         await page.goto(page_url, timeout=30_000, wait_until="domcontentloaded")
