@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://ibb.co/zHCHZpzC" alt="AI Test Reporter Banner" width="100%">
+  <img src="https://github.com/user-attachments/assets/8da43ddb-2624-432c-b682-4d1fa2c1b52e" alt="AI Test Reporter Banner" width="100%">
 </div>
 
 <p align="center">
@@ -26,7 +26,7 @@
 <br>
 
 <div align="center">
-  <img src="https://ibb.co/Q3bfnJvL" alt="AI Test Reporter Dashboard" width="100%">
+  <img src="https://github.com/user-attachments/assets/722ae281-c382-4fca-a31a-8acba2b4378c" alt="AI Test Reporter Dashboard" width="100%">
 </div>
 
 <br>
