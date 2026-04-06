@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AI Test Report — {{ target_url }}</title>
+<style>
+/* ── Reset & Variables ─────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:       #0a0f1e;
+  --surface:  #111827;
+  --surface2: #1e2a3a;
+  --surface3: #243044;
+  --border:   #2a3a50;
+  --text:     #e2e8f0;
+  --subtext:  #7a90a8;
+  --pass:     #10b981;
+  --fail:     #ef4444;
+  --warn:     #f59e0b;
+  --skip:     #818cf8;
+  --pass-bg:  #052e16;
+  --fail-bg:  #2d0a0a;
+  --warn-bg:  #2d1f00;
+  --skip-bg:  #1e1b4b;
+  --given:    #38bdf8;
+  --when:     #c084fc;
+  --then-pass:#10b981;
+  --then-fail:#ef4444;
+  --then-warn:#f59e0b;
+  --then-skip:#818cf8;
+  --font: 'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+  --mono: 'Cascadia Code','Fira Code',Consolas,monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+
+/* ── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── Header ────────────────────────────────────────── */
+.header{
+  background:linear-gradient(135deg,#0d1b2a 0%,#112240 50%,#0d2137 100%);
+  border-bottom:1px solid var(--border);
+  padding:2.5rem 3rem 2rem;
+  position:relative;
+  overflow:hidden;
+}
+.header::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 80% 50%,rgba(99,102,241,.12) 0%,transparent 60%);
+}
+.header-inner{position:relative;max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap}
+.header-left{}
+.header-badge{display:inline-block;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#a5b4fc;border-radius:999px;padding:.2rem .9rem;font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem}
+.header h1{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#e2e8f0,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2}
+.header-url{margin-top:.5rem;color:var(--subtext);font-size:.9rem;display:flex;align-items:center;gap:.5rem}
+.header-url a{color:#60a5fa;text-decoration:none}
+.header-url a:hover{text-decoration:underline}
+.header-meta{color:var(--subtext);font-size:.8rem;margin-top:.4rem}
+.header-right{text-align:right}
+.pass-rate-big{font-size:3.5rem;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--pass),#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.pass-rate-label{color:var(--subtext);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;margin-top:.2rem}
+.duration-chip{margin-top:.6rem;display:inline-block;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:.25rem .8rem;font-size:.8rem;color:var(--subtext)}
+
+/* ── Dashboard Grid ────────────────────────────────── */
+.dashboard{max-width:1400px;margin:2.5rem auto;padding:0 3rem;display:grid;grid-template-columns:220px 1fr;gap:2rem}
+@media(max-width:900px){.dashboard{grid-template-columns:1fr;padding:0 1.5rem}}
+
+/* Pie chart */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;display:flex;flex-direction:column;align-items:center;gap:1rem}
+.chart-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--subtext)}
+.chart-wrap svg{width:160px;height:160px}
+.legend{width:100%;display:flex;flex-direction:column;gap:.5rem}
+.legend-item{display:flex;align-items:center;justify-content:space-between;font-size:.8rem}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:.5rem}
+.legend-label{display:flex;align-items:center;color:var(--subtext)}
+.legend-count{font-weight:700;color:var(--text)}
+
+/* Status cards */
+.cards-timeline{display:flex;flex-direction:column;gap:1.5rem}
+.status-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+@media(max-width:700px){.status-cards{grid-template-columns:repeat(2,1fr)}}
+.status-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1rem;text-align:center;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.status-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.status-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.card-pass::before{background:var(--pass)}
+.card-fail::before{background:var(--fail)}
+.card-warn::before{background:var(--warn)}
+.card-skip::before{background:var(--skip)}
+.card-num{font-size:2.8rem;font-weight:900;line-height:1}
+.card-pass .card-num{color:var(--pass)}
+.card-fail .card-num{color:var(--fail)}
+.card-warn .card-num{color:var(--warn)}
+.card-skip .card-num{color:var(--skip)}
+.card-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--subtext);margin-top:.3rem;font-weight:700}
+.card-bar{height:4px;border-radius:2px;margin-top:1rem;background:var(--surface2);overflow:hidden}
+.card-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.card-pass .card-bar-fill{background:var(--pass)}
+.card-fail .card-bar-fill{background:var(--fail)}
+.card-warn .card-bar-fill{background:var(--warn)}
+.card-skip .card-bar-fill{background:var(--skip)}
+
+/* ── Timeline ──────────────────────────────────────── */
+.timeline-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem}
+.section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--subtext);margin-bottom:1rem}
+.timeline-track{display:flex;height:36px;border-radius:8px;overflow:hidden;background:var(--surface2)}
+.timeline-seg{height:100%;position:relative;min-width:2px;cursor:pointer;transition:filter .15s;display:flex;align-items:center;overflow:hidden}
+.timeline-seg:hover{filter:brightness(1.25)}
+.timeline-seg-label{font-size:.65rem;font-weight:700;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;padding:0 .3rem;pointer-events:none;text-transform:uppercase;letter-spacing:.05em}
+.timeline-legend{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;margin-top:.8rem}
+.timeline-leg-item{display:flex;align-items:center;gap:.4rem;font-size:.73rem;color:var(--subtext)}
+.timeline-leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* ── Suite progress bars ───────────────────────────── */
+.suite-bars-section{max-width:1400px;margin:0 auto 2rem;padding:0 3rem}
+@media(max-width:900px){.suite-bars-section{padding:0 1.5rem}}
+.suite-progress-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.8rem}
+.suite-progress-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1.1rem}
+.spi-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.spi-name{font-size:.8rem;font-weight:700;text-transform:capitalize;color:var(--text)}
+.spi-pct{font-size:.75rem;font-weight:700;color:var(--pass)}
+.spi-pct.has-fail{color:var(--fail)}
+.spi-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;display:flex}
+.spi-seg{height:100%}
+
+/* ── Suite Sections ────────────────────────────────── */
+.suites{max-width:1400px;margin:0 auto 3rem;padding:0 3rem}
+@media(max-width:900px){.suites{padding:0 1.5rem}}
+.suite{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:1rem;overflow:hidden}
+.suite-header{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.6rem;cursor:pointer;user-select:none;transition:background .15s}
+.suite-header:hover{background:var(--surface2)}
+.suite-name{font-size:.95rem;font-weight:700;text-transform:capitalize;display:flex;align-items:center;gap:.7rem}
+.suite-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.suite-icon-pass{background:var(--pass-bg);border:1px solid var(--pass)}
+.suite-icon-fail{background:var(--fail-bg);border:1px solid var(--fail)}
+.suite-icon-warn{background:var(--warn-bg);border:1px solid var(--warn)}
+.suite-icon-skip{background:var(--skip-bg);border:1px solid var(--skip)}
+.suite-meta{font-size:.73rem;color:var(--subtext);font-weight:400;margin-left:.2rem}
+.suite-right{display:flex;align-items:center;gap:.6rem}
+.badge{border-radius:6px;padding:.18rem .6rem;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.badge-pass{background:var(--pass-bg);color:var(--pass);border:1px solid var(--pass)}
+.badge-fail{background:var(--fail-bg);color:var(--fail);border:1px solid var(--fail)}
+.badge-warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.badge-skip{background:var(--skip-bg);color:var(--skip);border:1px solid var(--skip)}
+.chevron{transition:transform .25s;flex-shrink:0;color:var(--subtext)}
+.chevron.open{transform:rotate(180deg)}
+.suite-body{display:none;border-top:1px solid var(--border)}
+.suite-body.open{display:block}
+
+/* ── Scenario (Gherkin card) ───────────────────────── */
+.scenario{padding:1.2rem 1.6rem;border-bottom:1px solid var(--border);display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:start}
+.scenario:last-child{border-bottom:none}
+.scenario-status{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem;font-weight:900}
+.ss-pass{background:var(--pass-bg);color:var(--pass);border:1px solid var(--pass)}
+.ss-fail{background:var(--fail-bg);color:var(--fail);border:1px solid var(--fail)}
+.ss-warning{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.ss-skip{background:var(--skip-bg);color:var(--skip);border:1px solid var(--skip)}
+.scenario-body{}
+.scenario-title{font-size:.78rem;font-weight:700;color:var(--subtext);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem}
+.gherkin-line{font-size:.82rem;font-family:var(--mono);margin:.2rem 0;line-height:1.5}
+.kw-given{color:var(--given);font-weight:700}
+.kw-when {color:var(--when);font-weight:700}
+.kw-then-pass{color:var(--then-pass);font-weight:700}
+.kw-then-fail{color:var(--then-fail);font-weight:700}
+.kw-then-warn{color:var(--then-warn);font-weight:700}
+.kw-then-skip{color:var(--then-skip);font-weight:700}
+.gherkin-text{color:var(--text)}
+.scenario-dur{font-size:.72rem;color:var(--subtext);white-space:nowrap;text-align:right;padding-top:.2rem}
+.details-toggle{display:inline-block;margin-top:.5rem;font-size:.72rem;color:#60a5fa;cursor:pointer;border:none;background:none;padding:0;text-decoration:underline;text-underline-offset:3px}
+.details-toggle:hover{color:#93c5fd}
+.details-block{display:none;margin-top:.6rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;font-family:var(--mono);font-size:.75rem;color:#94a3b8;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow-y:auto}
+.details-block.open{display:block}
+.screenshot-wrap{margin-top:.8rem}
+.screenshot-wrap img{max-width:360px;width:100%;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;transition:max-width .3s ease}
+.screenshot-wrap img.zoomed{max-width:100%;cursor:zoom-out}
+
+/* ── Lightbox ─────────────────────────────────────── */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox.active{display:flex}
+.lightbox img{max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 0 80px rgba(0,0,0,.8)}
+
+/* ── Status icons ──────────────────────────────────── */
+.icon-pass::before{content:'✓'}
+.icon-fail::before{content:'✕'}
+.icon-warning::before{content:'!'}
+.icon-skip::before{content:'○'}
+
+/* ── Footer ────────────────────────────────────────── */
+footer{text-align:center;padding:2.5rem;border-top:1px solid var(--border);color:var(--subtext);font-size:.78rem}
+footer strong{color:var(--text)}
+
+/* ── Tooltip on timeline ───────────────────────────── */
+.tl-tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid var(--border);border-radius:6px;padding:.3rem .6rem;font-size:.72rem;color:var(--text);white-space:nowrap;pointer-events:none;display:none;z-index:10}
+.timeline-seg:hover .tl-tooltip{display:block}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="header-badge">AI Test Reporter</div>
+      <h1>Full Test Report</h1>
+      <div class="header-url">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <a href="{{ target_url }}" target="_blank" rel="noopener">{{ target_url }}</a>
+      </div>
+      <div class="header-meta">Generated {{ timestamp }} &nbsp;·&nbsp; {{ counts.total }} tests across {{ suite_groups|length }} suites</div>
+    </div>
+    <div class="header-right">
+      {% set pct = (counts.pass / counts.total * 100)|round|int if counts.total else 0 %}
+      <div class="pass-rate-big">{{ pct }}%</div>
+      <div class="pass-rate-label">Pass Rate</div>
+      <div class="duration-chip">⏱ {{ total_duration_s }}s total</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DASHBOARD ══════════════════ -->
+<div class="dashboard">
+
+  <!-- Donut chart -->
+  <div class="chart-wrap">
+    <div class="chart-title">Result Distribution</div>
+    {{ pie_svg | safe }}
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-label"><div class="legend-dot" style="background:var(--pass)"></div>Pass</div>
+        <div class="legend-count" style="color:var(--pass)">{{ counts.pass }}</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-label"><div class="legend-dot" style="background:var(--fail)"></div>Fail</div>
+        <div class="legend-count" style="color:var(--fail)">{{ counts.fail }}</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-label"><div class="legend-dot" style="background:var(--warn)"></div>Warning</div>
+        <div class="legend-count" style="color:var(--warn)">{{ counts.warning }}</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-label"><div class="legend-dot" style="background:var(--skip)"></div>Skip</div>
+        <div class="legend-count" style="color:var(--skip)">{{ counts.skip }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards + Timeline -->
+  <div class="cards-timeline">
+    <!-- Status cards -->
+    <div class="status-cards">
+      {% set total = counts.total if counts.total else 1 %}
+      <div class="status-card card-pass">
+        <div class="card-num">{{ counts.pass }}</div>
+        <div class="card-label">Passed</div>
+        <div class="card-bar"><div class="card-bar-fill" style="width:{{ (counts.pass/total*100)|round|int }}%"></div></div>
+      </div>
+      <div class="status-card card-fail">
+        <div class="card-num">{{ counts.fail }}</div>
+        <div class="card-label">Failed</div>
+        <div class="card-bar"><div class="card-bar-fill" style="width:{{ (counts.fail/total*100)|round|int }}%"></div></div>
+      </div>
+      <div class="status-card card-warn">
+        <div class="card-num">{{ counts.warning }}</div>
+        <div class="card-label">Warnings</div>
+        <div class="card-bar"><div class="card-bar-fill" style="width:{{ (counts.warning/total*100)|round|int }}%"></div></div>
+      </div>
+      <div class="status-card card-skip">
+        <div class="card-num">{{ counts.skip }}</div>
+        <div class="card-label">Skipped</div>
+        <div class="card-bar"><div class="card-bar-fill" style="width:{{ (counts.skip/total*100)|round|int }}%"></div></div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-wrap">
+      <div class="section-title">Test Execution Timeline</div>
+      <div class="timeline-track">
+        {% for seg in timeline %}
+        <div class="timeline-seg"
+             style="width:{{ seg.pct_width }}%;background:{{ seg.color }};"
+             title="{{ seg.suite }}: {{ seg.duration_ms }}ms">
+          <div class="tl-tooltip">{{ seg.suite }}: {{ seg.duration_ms }}ms</div>
+          {% if seg.pct_width > 4 %}
+          <span class="timeline-seg-label">{{ seg.suite }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="timeline-legend">
+        {% for seg in timeline %}
+        <div class="timeline-leg-item">
+          <div class="timeline-leg-dot" style="background:{{ seg.color }}"></div>
+          {{ seg.suite }} ({{ seg.duration_ms }}ms)
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SUITE PROGRESS BARS ══════════════════ -->
+<div class="suite-bars-section">
+  <div class="section-title" style="margin-bottom:1rem">Suite Breakdown</div>
+  <div class="suite-progress-grid">
+    {% for sg in suite_groups %}
+    {% set sg_total = sg.pass_count + sg.fail_count + sg.warn_count + sg.skip_count %}
+    {% set sg_t = sg_total if sg_total else 1 %}
+    <div class="suite-progress-item">
+      <div class="spi-header">
+        <div class="spi-name">{{ sg.name }}</div>
+        <div class="spi-pct {% if sg.fail_count %}has-fail{% endif %}">
+          {{ (sg.pass_count / sg_t * 100)|round|int }}%
+        </div>
+      </div>
+      <div class="spi-bar">
+        {% if sg.pass_count %}<div class="spi-seg" style="width:{{ (sg.pass_count/sg_t*100)|round|int }}%;background:var(--pass)"></div>{% endif %}
+        {% if sg.fail_count %}<div class="spi-seg" style="width:{{ (sg.fail_count/sg_t*100)|round|int }}%;background:var(--fail)"></div>{% endif %}
+        {% if sg.warn_count %}<div class="spi-seg" style="width:{{ (sg.warn_count/sg_t*100)|round|int }}%;background:var(--warn)"></div>{% endif %}
+        {% if sg.skip_count %}<div class="spi-seg" style="width:{{ (sg.skip_count/sg_t*100)|round|int }}%;background:var(--skip)"></div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ══════════════════ SUITE SECTIONS ══════════════════ -->
+<div class="suites">
+  <div class="section-title" style="margin-bottom:1rem">Detailed Results — Gherkin Format</div>
+
+  {% set suite_icons = {
+    'smoke':       '🔥',
+    'functional':  '⚙️',
+    'ui':          '🎨',
+    'responsive':  '📱',
+    'a11y':        '♿',
+    'performance': '⚡',
+    'seo':         '🔍',
+    'security':    '🔒',
+    'links':       '🔗',
+    'console':     '🖥️',
+    'forms':       '📝',
+    'crossbrowser':'🌐',
+    'api':         '📡',
+    'cookies':     '🍪',
+    'assets':      '📦',
+    'i18n':        '🌍',
+  } %}
+
+  {% for sg in suite_groups %}
+  {% set sg_has_fail = sg.fail_count > 0 %}
+  {% set sg_icon_class = 'suite-icon-fail' if sg.fail_count else ('suite-icon-warn' if sg.warn_count else ('suite-icon-skip' if sg.skip_count == (sg.pass_count + sg.fail_count + sg.warn_count + sg.skip_count) else 'suite-icon-pass')) %}
+
+  <div class="suite">
+    <div class="suite-header" onclick="toggleSuite('{{ sg.name }}')">
+      <div class="suite-name">
+        <div class="suite-icon {{ sg_icon_class }}">{{ suite_icons.get(sg.name, '🧪') }}</div>
+        {{ sg.name }}
+        <span class="suite-meta">{{ sg.pass_count + sg.fail_count + sg.warn_count + sg.skip_count }} tests</span>
+      </div>
+      <div class="suite-right">
+        {% if sg.fail_count %}<span class="badge badge-fail">{{ sg.fail_count }} fail</span>{% endif %}
+        {% if sg.warn_count %}<span class="badge badge-warn">{{ sg.warn_count }} warn</span>{% endif %}
+        {% if sg.pass_count %}<span class="badge badge-pass">{{ sg.pass_count }} pass</span>{% endif %}
+        {% if sg.skip_count %}<span class="badge badge-skip">{{ sg.skip_count }} skip</span>{% endif %}
+        <svg class="chevron {% if sg.fail_count %}open{% endif %}" id="chev-{{ sg.name }}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+
+    <div class="suite-body {% if sg.fail_count %}open{% endif %}" id="body-{{ sg.name }}">
+      {% for r in sg.results %}
+      {% set then_kw_class = 'kw-then-' ~ r.status %}
+      {% set status_icon = {'pass':'✓','fail':'✕','warning':'!','skip':'○'}.get(r.status, '?') %}
+      <div class="scenario">
+        <!-- Status pill -->
+        <div class="scenario-status ss-{{ r.status }}" title="{{ r.status }}">{{ status_icon }}</div>
+
+        <!-- Gherkin body -->
+        <div class="scenario-body">
+          <div class="scenario-title">Scenario: {{ r.test_name }}</div>
+
+          <div class="gherkin-line">
+            <span class="kw-given">{{ r.gherkin.given.split(' ', 1)[0] }}</span>
+            <span class="gherkin-text"> {{ r.gherkin.given.split(' ', 1)[1] if ' ' in r.gherkin.given else '' }}</span>
+          </div>
+          <div class="gherkin-line">
+            <span class="kw-when">{{ r.gherkin.when.split(' ', 1)[0] }}</span>
+            <span class="gherkin-text"> {{ r.gherkin.when.split(' ', 1)[1] if ' ' in r.gherkin.when else '' }}</span>
+          </div>
+          <div class="gherkin-line">
+            <span class="{{ then_kw_class }}">{{ r.gherkin.then.split(' ', 1)[0] }}</span>
+            <span class="gherkin-text"> {{ r.gherkin.then.split(' ', 1)[1] if ' ' in r.gherkin.then else '' }}</span>
+          </div>
+
+          {% if r.details %}
+          <button class="details-toggle" onclick="toggleDetails('det-{{ sg.name }}-{{ loop.index }}')">▸ show details</button>
+          <div class="details-block" id="det-{{ sg.name }}-{{ loop.index }}">{{ r.details }}</div>
+          {% endif %}
+
+          {% if r.screenshot %}
+          <div class="screenshot-wrap">
+            <img src="{{ r.screenshot }}" alt="Screenshot" onclick="openLightbox(this)"/>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Duration -->
+        <div class="scenario-dur">{{ r.duration_ms }}ms</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ══════════════════ LIGHTBOX ══════════════════ -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="Screenshot"/>
+</div>
+
+<!-- ══════════════════ FOOTER ══════════════════ -->
+<footer>
+  <strong>AI Test Reporter</strong> &nbsp;·&nbsp; {{ target_url }} &nbsp;·&nbsp; {{ timestamp }}<br/>
+  {{ counts.pass }} passed &nbsp;·&nbsp; {{ counts.fail }} failed &nbsp;·&nbsp; {{ counts.warning }} warnings &nbsp;·&nbsp; {{ counts.skip }} skipped
+</footer>
+
+<script>
+function toggleSuite(name) {
+  const body = document.getElementById('body-' + name);
+  const chev = document.getElementById('chev-' + name);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+function toggleDetails(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
+  const btn = el.previousElementSibling;
+  if (btn) btn.textContent = el.classList.contains('open') ? '▾ hide details' : '▸ show details';
+}
+function openLightbox(img) {
+  document.getElementById('lightbox-img').src = img.src;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+</script>
+</body>
+</html>
